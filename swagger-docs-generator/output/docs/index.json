@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2025-08-29T12:47:25.687Z",
+  "totalServices": 1,
+  "services": [
+    {
+      "name": "stokr-btcpay",
+      "files": [
+        {
+          "type": "controller",
+          "path": "stokr-btcpay/controller.auto-swagger.json",
+          "url": "/docs/stokr-btcpay/controller"
+        },
+        {
+          "type": "router",
+          "path": "stokr-btcpay/router.auto-swagger.json",
+          "url": "/docs/stokr-btcpay/router"
+        },
+        {
+          "type": "validator",
+          "path": "stokr-btcpay/validator.auto-swagger.json",
+          "url": "/docs/stokr-btcpay/validator"
+        },
+        {
+          "type": "authenticator",
+          "path": "stokr-btcpay/authenticator.auto-swagger.json",
+          "url": "/docs/stokr-btcpay/authenticator"
+        },
+        {
+          "type": "routes",
+          "path": "stokr-btcpay/routes.auto-swagger.json",
+          "url": "/docs/stokr-btcpay/routes"
+        }
+      ],
+      "totalEndpoints": 5
+    }
+  ]
+}

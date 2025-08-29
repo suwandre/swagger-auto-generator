@@ -1,18 +1,47 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const path = require('path');
+const cors = require('cors'); // Add this
 
-// Import routers from detected services
+// Import routers
 const stokrBtcpayRouter = require('./mock-services/stokr-btcpay/router');
+const sumsubServiceRouter = require('./mock-services/sumsub-service/router');
 
 const app = express();
+
+// CORS Configuration - ADD THIS SECTION
+const corsOptions = {
+  origin: [
+    'http://localhost:3001',  // Your Swagger UI server
+    'http://localhost:3000',  // Alternative ports
+    'http://127.0.0.1:3001'   // Alternative localhost format
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'userid', 
+    'gatewaypassed',
+    'client_signature',
+    'Origin',
+    'X-Requested-With',
+    'Accept'
+  ],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
-// CORS for development
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Add CORS headers manually (backup)
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, userid, gatewaypassed');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3001');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, userid, gatewaypassed, client_signature');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -20,11 +49,11 @@ app.use((req, res, next) => {
   }
 });
 
-// Mock API routes - these would match your real service routing
+// Your existing routes
 app.use('/api/btcpay', stokrBtcpayRouter);
 app.use('/api/sumsub', sumsubServiceRouter);
 
-// Auth service (inline for simplicity)
+// Auth service routes
 app.post('/api/auth/login', require('./mock-services/auth-microservice/controller').authenticate);
 app.post('/api/auth/validate', require('./mock-services/auth-microservice/controller').validateToken);
 
@@ -33,14 +62,16 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    services: ['stokr-btcpay', 'sumsub-service', 'auth-microservice']
+    services: ['stokr-btcpay', 'sumsub-service', 'auth-microservice'],
+    cors: 'enabled'
   });
 });
 
-// Root endpoint with API overview
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({
     message: '🚀 Mock Microservices API',
+    cors: 'enabled',
     services: [
       {
         name: 'stokr-btcpay',
@@ -49,34 +80,14 @@ app.get('/', (req, res) => {
           'GET /api/btcpay/payments/:id - Get payment',
           'POST /api/btcpay/payments/:id/refund - Refund payment'
         ]
-      },
-      {
-        name: 'sumsub-service', 
-        endpoints: [
-          'POST /api/sumsub/applicants - Create applicant',
-          'GET /api/sumsub/applicants/:id - Get applicant',
-          'POST /api/sumsub/applicants/:id/token - Get access token'
-        ]
-      },
-      {
-        name: 'auth-microservice',
-        endpoints: [
-          'POST /api/auth/login - Authenticate user',
-          'POST /api/auth/validate - Validate token'
-        ]
       }
-    ],
-    meta: {
-      'health-check': 'GET /health',
-      'documentation': 'http://localhost:3001 (run swagger generator first)'
-    }
+    ]
   });
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 Mock API server running at http://localhost:${PORT}`);
-  console.log(`📋 API overview: http://localhost:${PORT}/`);
+  console.log(`🔄 CORS enabled for Swagger UI at http://localhost:3001`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  console.log(`📖 Generate docs with: npm run generate-docs`);
 });

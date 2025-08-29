@@ -1,8 +1,3 @@
-const joi = require("joi");
-const { ObjectId } = require("mongodb");
-
-const logMW = require("../libs/logging-middleware");
-
 const validateRequest = (prop, schema) => (req, res, next) => {
   const { error, value } = schema.validate(req[prop], { abortEarly: false });
   if (error) {

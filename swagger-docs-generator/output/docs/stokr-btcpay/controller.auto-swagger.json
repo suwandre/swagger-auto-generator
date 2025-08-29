@@ -1,0 +1,142 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "stokr-btcpay - controller (Auto-Generated)",
+    "description": "Automatically generated API documentation for controller.js",
+    "version": "1.0.0",
+    "x-generated-at": "2025-08-29T12:47:25.658Z",
+    "x-functions-analyzed": 3,
+    "x-source-file": "stokr-btcpay/controller.js"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "userIdHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "userid"
+      }
+    }
+  },
+  "paths": {
+    "/invoices": {
+      "post": {
+        "summary": "createInvoice",
+        "description": "Automatically analyzed function: **createInvoice** *(async)*\n\n**Error responses:**\n- 500: E_INTERNAL:No BTC payment method found\n- 500: E_INTERNAL:No BTC address found",
+        "tags": [
+          "controller"
+        ],
+        "operationId": "stokr-btcpay_controller_createInvoice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error: E_INTERNAL:No BTC address found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}": {
+      "get": {
+        "summary": "getInvoice",
+        "description": "Automatically analyzed function: **getInvoice** *(async)*",
+        "tags": [
+          "controller"
+        ],
+        "operationId": "stokr-btcpay_controller_getInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Resource identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notify": {
+      "post": {
+        "summary": "notify",
+        "description": "Automatically analyzed function: **notify** *(async)*\n\n**Error responses:**\n- 200: E_BAD_REQUEST:Invalid project name\n- 200: No investmentId in metadata",
+        "tags": [
+          "controller"
+        ],
+        "operationId": "stokr-btcpay_controller_notify",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Error: No investmentId in metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

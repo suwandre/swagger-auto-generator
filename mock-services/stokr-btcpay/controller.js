@@ -1,11 +1,5 @@
 const { ObjectId } = require("mongodb");
 
-const config = require("../config/config");
-const log = require("../libs/log");
-const stokrDB = require("../libs/stokr-db");
-const internalApi = require("../libs/internal-api");
-const btcpay = require("../libs/btcpay-api");
-
 const getInvestment = async (investmentId) => {
   const investment = await stokrDB("investment").findOne({ _id: investmentId });
   if (!investment) {

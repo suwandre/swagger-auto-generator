@@ -1,0 +1,113 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "stokr-btcpay - routes (Auto-Generated)",
+    "description": "Automatically generated API documentation for routes.js",
+    "version": "1.0.0",
+    "x-generated-at": "2025-08-29T12:47:25.686Z",
+    "x-functions-analyzed": 7,
+    "x-source-file": "stokr-btcpay/routes.js"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "userIdHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "userid"
+      }
+    },
+    "routers": {
+      "router": {
+        "description": "Express router with middleware and routes",
+        "middleware": false
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "get__",
+        "description": "Automatically analyzed function: **get__**",
+        "tags": [
+          "routes"
+        ],
+        "operationId": "stokr-btcpay_routes_get__",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "use": {
+        "summary": "use__",
+        "description": "Automatically analyzed function: **use__**",
+        "tags": [
+          "routes"
+        ],
+        "operationId": "stokr-btcpay_routes_use__",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "options__",
+        "description": "Automatically analyzed function: **options__**",
+        "tags": [
+          "routes"
+        ],
+        "operationId": "stokr-btcpay_routes_options__",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
