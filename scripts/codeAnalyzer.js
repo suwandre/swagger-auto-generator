@@ -9,33 +9,40 @@ class CodeAnalyzer {
   }
 
   analyzeFile(filePath) {
-    const code = fs.readFileSync(filePath, 'utf8');
-    const ast = parse(code, {
-      sourceType: 'module',
-      plugins: ['commonjs']
-    });
+    try {
+      const code = fs.readFileSync(filePath, 'utf8');
+      const ast = parse(code, {
+        sourceType: 'module',
+        plugins: ['commonjs'],
+        allowImportExportEverywhere: true,
+        allowReturnOutsideFunction: true
+      });
 
-    const functions = [];
+      const functions = [];
 
-    traverse(ast, {
-      // Analyze exports.functionName = function() {}
-      AssignmentExpression: (path) => {
-        if (this.isExportsAssignment(path.node)) {
-          const funcInfo = this.extractFunctionInfo(path.node, code);
-          if (funcInfo) functions.push(funcInfo);
+      traverse(ast, {
+        // Analyze exports.functionName = function() {}
+        AssignmentExpression: (path) => {
+          if (this.isExportsAssignment(path.node)) {
+            const funcInfo = this.extractFunctionInfo(path.node, code);
+            if (funcInfo) functions.push(funcInfo);
+          }
+        },
+
+        // Analyze module.exports = { functionName: function() {} }
+        ObjectProperty: (path) => {
+          if (this.isInModuleExports(path)) {
+            const funcInfo = this.extractObjectFunctionInfo(path.node, code);
+            if (funcInfo) functions.push(funcInfo);
+          }
         }
-      },
+      });
 
-      // Analyze module.exports = { functionName: function() {} }
-      ObjectProperty: (path) => {
-        if (this.isInModuleExports(path)) {
-          const funcInfo = this.extractObjectFunctionInfo(path.node, code);
-          if (funcInfo) functions.push(funcInfo);
-        }
-      }
-    });
-
-    return functions;
+      return functions;
+    } catch (error) {
+      console.error(`Error analyzing ${filePath}:`, error.message);
+      return [];
+    }
   }
 
   isExportsAssignment(node) {
@@ -48,7 +55,6 @@ class CodeAnalyzer {
   }
 
   isInModuleExports(path) {
-    // Check if this ObjectProperty is inside module.exports
     let parent = path.parent;
     while (parent) {
       if (parent.type === 'AssignmentExpression' &&
@@ -98,7 +104,6 @@ class CodeAnalyzer {
       if (param.type === 'Identifier') {
         return { name: param.name, type: 'unknown', required: true };
       } else if (param.type === 'ObjectPattern') {
-        // Handle destructuring: { username, password } = req.body
         return {
           name: 'body',
           type: 'object',
@@ -118,23 +123,38 @@ class CodeAnalyzer {
       statusCodes: [],
       errorMessages: [],
       usesAuth: false,
-      isMiddleware: false
+      isMiddleware: false,
+      requiredBodyFields: []
     };
 
     const bodyStr = code.substring(body.start, body.end);
 
     // Enhanced status code + error message detection
-    const statusErrorMatches = bodyStr.match(/res\.status\((\d+)\)\.send\(["']([^"']+)["']\)/g);
+    const statusErrorMatches = bodyStr.match(/res\.status\((\d+)\)\.(?:send|json)\(([^)]+)\)/g);
     if (statusErrorMatches) {
       statusErrorMatches.forEach(match => {
         const statusMatch = match.match(/(\d+)/);
-        const messageMatch = match.match(/send\(["']([^"']+)["']\)/);
+        const messageMatch = match.match(/(?:send|json)\(([^)]+)\)/);
         
         if (statusMatch && messageMatch) {
-          patterns.statusCodes.push(parseInt(statusMatch[1]));
+          const code = parseInt(statusMatch[1]);
+          patterns.statusCodes.push(code);
+          
+          // Try to extract error message
+          let message = messageMatch[1].replace(/['"]/g, '');
+          if (message.includes('{')) {
+            // JSON response
+            try {
+              const jsonMatch = message.match(/"error"\s*:\s*"([^"]+)"/);
+              if (jsonMatch) message = jsonMatch[1];
+            } catch (e) {
+              // Keep original
+            }
+          }
+          
           patterns.errorMessages.push({
-            code: parseInt(statusMatch[1]),
-            message: messageMatch[1]
+            code,
+            message: message.substring(0, 100) // Limit length
           });
         }
       });
@@ -146,7 +166,10 @@ class CodeAnalyzer {
     }
 
     // Enhanced auth detection
-    if (bodyStr.includes('req.user') || bodyStr.includes('checkHeader') || bodyStr.includes('UserTypes')) {
+    if (bodyStr.includes('req.user') || 
+        bodyStr.includes('checkHeader') || 
+        bodyStr.includes('UserTypes') ||
+        bodyStr.includes('req.headers["userid"]')) {
       patterns.usesAuth = true;
     }
 
@@ -158,13 +181,17 @@ class CodeAnalyzer {
       patterns.responseTypes.push('text/plain');
     }
 
-    // Detect additional status codes
-    const additionalStatusMatches = bodyStr.match(/res\.status\((\d+)\)/g);
-    if (additionalStatusMatches) {
-      additionalStatusMatches.forEach(match => {
-        const code = parseInt(match.match(/\d+/)[0]);
-        if (!patterns.statusCodes.includes(code)) {
-          patterns.statusCodes.push(code);
+    // Extract required body fields
+    const bodyFieldMatches = bodyStr.match(/const\s*{\s*([^}]+)\s*}\s*=\s*req\.body/g);
+    if (bodyFieldMatches) {
+      bodyFieldMatches.forEach(match => {
+        const fieldsMatch = match.match(/{\s*([^}]+)\s*}/);
+        if (fieldsMatch) {
+          const fields = fieldsMatch[1]
+            .split(',')
+            .map(field => field.trim())
+            .filter(field => field.length > 0);
+          patterns.requiredBodyFields = patterns.requiredBodyFields.concat(fields);
         }
       });
     }
