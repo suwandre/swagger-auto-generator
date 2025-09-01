@@ -1,0 +1,35 @@
+{
+  "name": "mock-swagger",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suwandre/mock-swagger.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/suwandre/mock-swagger/issues"
+  },
+  "homepage": "https://github.com/suwandre/mock-swagger#readme",
+  "dependencies": {
+    "@babel/parser": "^7.28.3",
+    "@babel/traverse": "^7.28.3",
+    "@babel/types": "^7.28.2",
+    "fs-extra": "^11.3.1",
+    "glob": "^11.0.3",
+    "path": "^0.12.7",
+    "swagger-jsdoc": "^6.2.8",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.34.0",
+    "jest": "^30.1.2",
+    "prettier": "^3.6.2"
+  }
+}
