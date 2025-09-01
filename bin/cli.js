@@ -3,22 +3,21 @@
 const { program } = require('commander');
 const path = require('path');
 const fs = require('fs');
-const { generateSwaggerDocs } = require('../dist/index');
+
+// Call storeOptionsAsProperties FIRST, before any other configuration
+program.storeOptionsAsProperties(false);
 
 program
   .name('swagger-gen')
   .description('Automated Swagger documentation generator')
-  .version('1.0.0');  // Use built-in version method
-
-// Add storeOptionsAsProperties(false) to avoid conflicts
-program.storeOptionsAsProperties(false);
+  .version('1.0.0');
 
 program
   .option('-i, --input <path>', 'Input directory path', './src')
   .option('-o, --output <path>', 'Output file path', './docs/swagger.json')
   .option('-c, --config <path>', 'Configuration file path')
   .option('--title <title>', 'API title', 'Microservice API')
-  .option('--api-version <version>', 'API version', '1.0.0')  // Changed from --version
+  .option('--api-version <version>', 'API version', '1.0.0')
   .option('--description <desc>', 'API description')
   .option('--base-url <url>', 'Base URL')
   .action(async (options) => {
@@ -33,7 +32,7 @@ program
           outputPath: path.resolve(options.output),
           apiInfo: {
             title: options.title,
-            version: options.apiVersion,  // Use apiVersion instead of version
+            version: options.apiVersion,
             description: options.description,
             baseUrl: options.baseUrl
           }
@@ -41,6 +40,7 @@ program
       }
       
       console.log('🚀 Starting Swagger documentation generation...');
+      const { generateSwaggerDocs } = require('../dist/index');
       await generateSwaggerDocs(config);
       console.log('🎉 Documentation generation completed!');
       
