@@ -9,7 +9,8 @@
     "swagger": "node swagger.js",
     "docs": "node serve-docs.js",
     "swagger:dev": "npm run swagger && npm run docs",
-    "test:swagger": "npm run swagger && echo 'Testing swagger generation...' && node -e \"console.log('Generated file exists:', require('fs').existsSync('./swagger-output.json'))\""
+    "test:swagger": "npm run swagger && echo 'Testing swagger generation...' && node -e \"console.log('Generated file exists:', require('fs').existsSync('./swagger-output.json'))\"",
+    "test:setup": "node test-setup.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
   },
   "homepage": "https://github.com/suwandre/mock-swagger#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.1"

@@ -1,5 +1,14 @@
 const express = require('express');
 const app = express();
+const cors = require('cors');
+
+// Enable CORS for all routes - for development
+app.use(cors({
+    origin: '*', // In production, specify your actual domain
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true
+}));
 
 app.use(express.json());
 
