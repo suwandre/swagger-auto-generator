@@ -44,14 +44,27 @@ class SwaggerGenerator {
     }
     async generate() {
         console.log('🔍 Scanning for microservice files...');
-        const files = await file_utils_1.FileUtils.findMicroserviceFiles(this.config.inputPath);
-        console.log('📝 Parsing controllers...');
-        const endpoints = await controller_parser_1.ControllerParser.parseControllers(files.controllers || []);
+        const files = await file_utils_1.FileUtils.findMicroserviceFiles(this.config.inputPath, this.config.include, this.config.exclude);
+        // Filter out any undefined paths and add debugging
+        const controllers = (files.controllers || []).filter(Boolean);
+        const routers = (files.routers || []).filter(Boolean);
+        const validators = (files.validators || []).filter(Boolean);
+        const authenticators = (files.authenticators || []).filter(Boolean);
+        console.log(`📝 Processing ${controllers.length} controller files...`);
+        console.log('Controller files:', controllers);
+        if (controllers.length === 0) {
+            console.warn('⚠️  No controller files found to parse!');
+            return;
+        }
+        const endpoints = await controller_parser_1.ControllerParser.parseControllers(controllers);
+        if (endpoints.length === 0) {
+            console.warn('⚠️  No endpoints found. Check your exported functions.');
+        }
         console.log('🏗️  Generating Swagger specification...');
         const swaggerSpec = this.buildSwaggerSpec(endpoints);
         console.log('💾 Writing Swagger documentation...');
         await this.writeSwaggerFile(swaggerSpec);
-        console.log('✅ Swagger documentation generated successfully!');
+        console.log(`✅ Generated documentation for ${endpoints.length} endpoints!`);
     }
     buildSwaggerSpec(endpoints) {
         const spec = {

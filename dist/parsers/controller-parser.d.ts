@@ -5,7 +5,7 @@ export declare class ControllerParser {
     private static extractBasePathFromFile;
     private static generateRouteFromFunction;
     private static generateSummary;
-    private static convertParameters;
+    private static extractRealParameters;
     private static generateResponses;
     private static extractTagFromFile;
 }

@@ -12,12 +12,11 @@ export interface SwaggerConfig {
 }
 export interface ParsedFunction {
     name: string;
-    parameters: Parameter[];
-    returnType?: string;
+    parameters: any[];
     comments: string[];
+    body?: string;
     httpMethod?: string;
     route?: string;
-    middleware?: string[];
 }
 export interface Parameter {
     name: string;
