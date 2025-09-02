@@ -3,7 +3,10 @@ import { FileUtils } from '../utils/file-utils';
 import { ParsedFunction, SwaggerEndpoint } from '../types';
 
 export class ControllerParser {
-  static async parseControllers(filePaths: string[]): Promise<SwaggerEndpoint[]> {
+  static async parseControllers(
+    filePaths: string[],
+    routerRoutes: Array<{ method: string, path: string, functionName: string }> = []
+  ): Promise<SwaggerEndpoint[]> {
     const endpoints: SwaggerEndpoint[] = [];
 
     console.log(`🔍 Parsing ${filePaths.length} controller files...`);
@@ -29,7 +32,11 @@ export class ControllerParser {
           }
 
           console.log(`   Processing function: ${func.name}`);
-          const endpoint = this.convertToSwaggerEndpoint(func, filePath);
+
+          // Find corresponding route info from router
+          const routeInfo = routerRoutes.find(r => r.functionName === func.name);
+
+          const endpoint = this.convertToSwaggerEndpoint(func, filePath, routeInfo);
           if (endpoint) {
             endpoints.push(endpoint);
             console.log(`   ✅ Added endpoint: ${endpoint.method} ${endpoint.path}`);
@@ -44,7 +51,12 @@ export class ControllerParser {
     return endpoints;
   }
 
-  private static convertToSwaggerEndpoint(func: ParsedFunction, filePath: string): SwaggerEndpoint | null {
+
+  private static convertToSwaggerEndpoint(
+    func: ParsedFunction,
+    filePath: string,
+    routeInfo?: { method: string, path: string, functionName: string }
+  ): SwaggerEndpoint | null {
     // Skip private functions (starting with _)
     if (func.name.startsWith('_')) {
       console.log(`   Skipping private function: ${func.name}`);
@@ -53,11 +65,20 @@ export class ControllerParser {
 
     console.log(`   Generating endpoint for: ${func.name}`);
 
-    const basePath = this.extractBasePathFromFile(filePath);
-    console.log(`   Base path: "${basePath}"`);
+    // Use router info if available, otherwise generate
+    let route: string;
+    let method: string;
 
-    let route = func.route || this.generateRouteFromFunction(func.name, basePath);
-    console.log(`   Generated route: "${route}"`);
+    if (routeInfo) {
+      route = routeInfo.path;
+      method = routeInfo.method;
+      console.log(`   Using router info: ${method} ${route}`);
+    } else {
+      const basePath = this.extractBasePathFromFile(filePath);
+      route = func.route || this.generateRouteFromFunction(func.name, basePath);
+      method = func.httpMethod || 'GET';
+      console.log(`   Generated route: ${method} ${route}`);
+    }
 
     // Safety check for undefined routes
     if (!route || typeof route !== 'string') {
@@ -70,17 +91,18 @@ export class ControllerParser {
       route = '/' + route;
     }
 
-    console.log(`   Final route: "${route}"`);
+    console.log(`   Final endpoint: ${method} ${route}`);
 
     return {
       path: route,
-      method: func.httpMethod || 'GET',
+      method: method,
       summary: this.generateSummary(func),
       parameters: this.extractRealParameters(func),
       responses: this.generateResponses(),
       tags: [this.extractTagFromFile(filePath)]
     };
   }
+
 
 
   private static extractBasePathFromFile(filePath: string): string {

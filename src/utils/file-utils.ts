@@ -21,8 +21,8 @@ export class FileUtils {
   }
 
   static async findMicroserviceFiles(
-    basePath: string, 
-    includePatterns?: string[], 
+    basePath: string,
+    includePatterns?: string[],
     excludePatterns?: string[]
   ): Promise<{ [key: string]: string[] }> {
     console.log(`🔎 Scanning directory: ${basePath}`);
@@ -45,7 +45,7 @@ export class FileUtils {
 
     for (const pattern of patterns) {
       try {
-        const files = await glob(pattern, { 
+        const files = await glob(pattern, {
           cwd: basePath,
           ignore: excludePatterns || []
         });
@@ -56,9 +56,9 @@ export class FileUtils {
 
         for (const file of files) {
           if (!file) continue; // Skip undefined/empty files
-          
+
           const resolvedPath = path.resolve(basePath, file);
-          
+
           if (!processedFiles.has(resolvedPath)) {
             processedFiles.add(resolvedPath);
             if (!allFiles[category]) {
@@ -78,6 +78,39 @@ export class FileUtils {
     });
 
     return allFiles;
+  }
+
+  /**
+  * Parse router.js file to extract route definitions
+  * Matches patterns like: router.post("/create-invoice", ..., controller.createInvoice)
+  */
+  static parseRouterFile(filePath: string): Array<{ method: string, path: string, functionName: string }> {
+    try {
+      const content = this.readFileContent(filePath);
+      const routes: Array<{ method: string, path: string, functionName: string }> = [];
+
+      // Regex to match router method calls with controller functions
+      const routePattern = /router\.(get|post|put|delete|patch)\(\s*["']([^"']+)["'][^)]*controller\.(\w+)/g;
+
+      let match;
+      while ((match = routePattern.exec(content)) !== null) {
+        routes.push({
+          method: match[1].toUpperCase(),
+          path: match[2],
+          functionName: match[3]
+        });
+      }
+
+      console.log(`📍 Found ${routes.length} routes in router file:`);
+      routes.forEach(route => {
+        console.log(`   ${route.method} ${route.path} → ${route.functionName}`);
+      });
+
+      return routes;
+    } catch (error: any) {
+      console.warn(`⚠️  Could not parse router file: ${error.message}`);
+      return [];
+    }
   }
 
   private static categorizeFile(pattern: string): string {

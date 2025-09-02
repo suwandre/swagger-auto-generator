@@ -23,18 +23,23 @@ export class SwaggerGenerator {
     // Filter out any undefined paths and add debugging
     const controllers = (files.controllers || []).filter(Boolean);
     const routers = (files.routers || []).filter(Boolean);
-    const validators = (files.validators || []).filter(Boolean);
-    const authenticators = (files.authenticators || []).filter(Boolean);
 
     console.log(`📝 Processing ${controllers.length} controller files...`);
-    console.log('Controller files:', controllers);
 
     if (controllers.length === 0) {
       console.warn('⚠️  No controller files found to parse!');
       return;
     }
 
-    const endpoints = await ControllerParser.parseControllers(controllers);
+    // NEW: Parse router file for route information
+    let routerRoutes: Array<{ method: string, path: string, functionName: string }> = [];
+    if (routers.length > 0) {
+      console.log('📍 Parsing router file for route definitions...');
+      routerRoutes = FileUtils.parseRouterFile(routers[0]);
+    }
+
+    // Pass router routes to controller parser
+    const endpoints = await ControllerParser.parseControllers(controllers, routerRoutes);
 
     if (endpoints.length === 0) {
       console.warn('⚠️  No endpoints found. Check your exported functions.');
@@ -48,6 +53,7 @@ export class SwaggerGenerator {
 
     console.log(`✅ Generated documentation for ${endpoints.length} endpoints!`);
   }
+
 
   private buildSwaggerSpec(endpoints: SwaggerEndpoint[]): any {
     const spec = {
