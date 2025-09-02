@@ -1,6 +1,7 @@
 import { ASTParser } from '../utils/ast-utils';
 import { FileUtils } from '../utils/file-utils';
 import { ParsedFunction, SwaggerEndpoint } from '../types';
+import path from 'path';
 
 export class ControllerParser {
   static async parseControllers(
@@ -31,6 +32,12 @@ export class ControllerParser {
             continue;
           }
 
+          // NEW: Skip middleware functions
+          if (this.isMiddlewareFunction(func, filePath)) {
+            console.log(`   🔒 Skipping middleware function: ${func.name}`);
+            continue;
+          }
+
           console.log(`   Processing function: ${func.name}`);
 
           // Find corresponding route info from router
@@ -50,6 +57,7 @@ export class ControllerParser {
     console.log(`📊 Total endpoints generated: ${endpoints.length}`);
     return endpoints;
   }
+
 
 
   private static convertToSwaggerEndpoint(
@@ -383,4 +391,45 @@ export class ControllerParser {
 
     return fileName.replace(/\.?controller\.js$|\.js$/, '').toLowerCase();
   }
+
+  /**
+   * Detect if a function is middleware (should not be treated as API endpoint)
+   */
+  private static isMiddlewareFunction(func: ParsedFunction, filePath: string): boolean {
+    const fileName = path.basename(filePath);
+
+    // Skip known middleware files
+    if (fileName === 'authenticator.js' || fileName === 'validator.js') {
+      return true;
+    }
+
+    // Skip by function name patterns
+    const middlewarePatterns = [
+      /^validate/i,     // validateRequest, validateBody, etc.
+      /^check/i,        // checkPermissions, checkAuth, etc.
+      /^verify/i,       // verifyToken, verifyClient, etc.
+      /^auth/i,         // authenticate, authorize, etc.
+      /middleware$/i    // anyFunctionMiddleware
+    ];
+
+    if (middlewarePatterns.some(pattern => pattern.test(func.name))) {
+      console.log(`   🔒 Detected middleware by name pattern: ${func.name}`);
+      return true;
+    }
+
+    // Check function signature - middleware typically has (req, res, next)
+    if (func.parameters && func.parameters.length === 3) {
+      const paramNames = func.parameters.map(p => p.name.toLowerCase());
+      if (paramNames.includes('req') && paramNames.includes('res') && paramNames.includes('next')) {
+        // Additional check: if it calls next() it's definitely middleware
+        if (func.body && func.body.includes('next()')) {
+          console.log(`   🔒 Detected middleware by signature and next() call: ${func.name}`);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
 }
