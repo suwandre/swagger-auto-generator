@@ -168,10 +168,9 @@ export class ControllerParser {
 
   private static extractRealParameters(func: ParsedFunction): any[] {
     const parameters: any[] = [];
-
     if (!func.body) return parameters;
 
-    // Extract from req.params (path parameters)
+    // 1. Direct access patterns: req.params.id, req.query.page
     const pathParamMatches = func.body.match(/req\.params\.(\w+)/g) || [];
     pathParamMatches.forEach(match => {
       const paramName = match.split('.')[2];
@@ -186,7 +185,6 @@ export class ControllerParser {
       }
     });
 
-    // Extract from req.query (query parameters)  
     const queryParamMatches = func.body.match(/req\.query\.(\w+)/g) || [];
     queryParamMatches.forEach(match => {
       const paramName = match.split('.')[2];
@@ -201,21 +199,138 @@ export class ControllerParser {
       }
     });
 
-    // Extract from req.body (body parameters)
-    const bodyParamMatches = func.body.match(/req\.body\.(\w+)/g) || [];
-    if (bodyParamMatches.length > 0) {
-      parameters.push({
-        name: 'body',
-        in: 'body',
-        required: true,
-        schema: { type: 'object' },
-        description: 'Request body'
-      });
+    // 2. NEW: Destructured path params: const { id, userId } = req.params;
+    const destructuredPathMatches = func.body.match(/const\s*{\s*([^}]+)\s*}\s*=\s*req\.params/g) || [];
+    destructuredPathMatches.forEach(match => {
+      const varsMatch = match.match(/{\s*([^}]+)\s*}/);
+      if (varsMatch) {
+        const variables = varsMatch[1]
+          .split(',')
+          .map(v => v.trim())
+          .map(v => v.split('=')[0].trim()) // Remove default values
+          .filter(v => v && !v.includes('...'));
+
+        variables.forEach(variable => {
+          if (!parameters.find(p => p.name === variable)) {
+            parameters.push({
+              name: variable,
+              in: 'path',
+              required: true,
+              type: 'string',
+              description: `${variable} path parameter`
+            });
+          }
+        });
+      }
+    });
+
+    // 3. NEW: Destructured query params: const { page, limit } = req.query;
+    const destructuredQueryMatches = func.body.match(/const\s*{\s*([^}]+)\s*}\s*=\s*req\.query/g) || [];
+    destructuredQueryMatches.forEach(match => {
+      const varsMatch = match.match(/{\s*([^}]+)\s*}/);
+      if (varsMatch) {
+        const variables = varsMatch[1]
+          .split(',')
+          .map(v => v.trim())
+          .map(v => v.split('=')[0].trim()) // Remove default values
+          .filter(v => v && !v.includes('...'));
+
+        variables.forEach(variable => {
+          if (!parameters.find(p => p.name === variable)) {
+            parameters.push({
+              name: variable,
+              in: 'query',
+              required: !func.body!.includes(`${variable} =`), // Check for default values
+              type: 'string',
+              description: `${variable} query parameter`
+            });
+          }
+        });
+      }
+    });
+
+    // 4. Body parameters (for POST/PUT endpoints)
+    const httpMethod = func.httpMethod?.toLowerCase();
+    if (httpMethod === 'post' || httpMethod === 'put' || httpMethod === 'patch') {
+      const bodyFields = this.extractBodyFields(func.body);
+
+      if (bodyFields.length > 0) {
+        const properties: any = {};
+        const required: string[] = [];
+
+        bodyFields.forEach(field => {
+          properties[field.name] = {
+            type: field.type,
+            description: field.description
+          };
+          if (field.required) {
+            required.push(field.name);
+          }
+        });
+
+        parameters.push({
+          name: 'body',
+          in: 'body',
+          required: true,
+          schema: {
+            type: 'object',
+            properties,
+            required
+          },
+          description: 'Request body'
+        });
+      }
+
+      // Also check for direct req.body usage
+      if (func.body.includes('req.body') && bodyFields.length === 0) {
+        parameters.push({
+          name: 'body',
+          in: 'body',
+          required: true,
+          schema: { type: 'object' },
+          description: 'Request body'
+        });
+      }
     }
 
     return parameters;
   }
 
+  private static extractBodyFields(functionBody: string): any[] {
+    const fields: any[] = [];
+
+    // Extract from destructuring: const { name, email, role = 'user' } = req.body
+    const destructuringMatches = functionBody.match(/const\s*{\s*([^}]+)\s*}\s*=\s*req\.body/g) || [];
+
+    destructuringMatches.forEach(match => {
+      const variablesMatch = match.match(/{\s*([^}]+)\s*}/);
+      if (variablesMatch) {
+        const variables = variablesMatch[1].split(',').map(v => v.trim());
+
+        variables.forEach(variable => {
+          let fieldName = variable;
+          let hasDefault = false;
+
+          // Check for default values: role = 'user'
+          if (variable.includes('=')) {
+            fieldName = variable.split('=')[0].trim();
+            hasDefault = true;
+          }
+
+          if (fieldName && !fieldName.includes('...')) {
+            fields.push({
+              name: fieldName,
+              type: 'string',
+              required: !hasDefault,
+              description: `${fieldName} field`
+            });
+          }
+        });
+      }
+    });
+
+    return fields;
+  }
 
   private static generateResponses(): any[] {
     return [
