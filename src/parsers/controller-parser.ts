@@ -32,7 +32,7 @@ export class ControllerParser {
             continue;
           }
 
-          // NEW: Skip middleware functions
+          // Enhancement 2: Skip middleware functions
           if (this.isMiddlewareFunction(func, filePath)) {
             console.log(`   🔒 Skipping middleware function: ${func.name}`);
             continue;
@@ -43,7 +43,8 @@ export class ControllerParser {
           // Find corresponding route info from router
           const routeInfo = routerRoutes.find(r => r.functionName === func.name);
 
-          const endpoint = this.convertToSwaggerEndpoint(func, filePath, routeInfo);
+          // Enhancement 3: Pass routerRoutes for smart method detection
+          const endpoint = this.convertToSwaggerEndpoint(func, filePath, routeInfo, routerRoutes);
           if (endpoint) {
             endpoints.push(endpoint);
             console.log(`   ✅ Added endpoint: ${endpoint.method} ${endpoint.path}`);
@@ -58,12 +59,11 @@ export class ControllerParser {
     return endpoints;
   }
 
-
-
   private static convertToSwaggerEndpoint(
     func: ParsedFunction,
     filePath: string,
-    routeInfo?: { method: string, path: string, functionName: string }
+    routeInfo?: { method: string, path: string, functionName: string },
+    routerRoutes?: Array<{ method: string, path: string, functionName: string }>
   ): SwaggerEndpoint | null {
     // Skip private functions (starting with _)
     if (func.name.startsWith('_')) {
@@ -80,12 +80,12 @@ export class ControllerParser {
     if (routeInfo) {
       route = routeInfo.path;
       method = routeInfo.method;
-      console.log(`   Using router info: ${method} ${route}`);
+      console.log(`   📍 Using router info: ${method} ${route}`);
     } else {
       const basePath = this.extractBasePathFromFile(filePath);
       route = func.route || this.generateRouteFromFunction(func.name, basePath);
-      method = func.httpMethod || 'GET';
-      console.log(`   Generated route: ${method} ${route}`);
+      method = this.inferHttpMethod(func.name, func.comments, routerRoutes);
+      console.log(`   🔧 Generated: ${method} ${route}`);
     }
 
     // Safety check for undefined routes
@@ -99,7 +99,7 @@ export class ControllerParser {
       route = '/' + route;
     }
 
-    console.log(`   Final endpoint: ${method} ${route}`);
+    console.log(`   ✅ Final endpoint: ${method} ${route}`);
 
     return {
       path: route,
@@ -110,8 +110,6 @@ export class ControllerParser {
       tags: [this.extractTagFromFile(filePath)]
     };
   }
-
-
 
   private static extractBasePathFromFile(filePath: string): string {
     if (!filePath || typeof filePath !== 'string') {
@@ -432,4 +430,67 @@ export class ControllerParser {
     return false;
   }
 
+  /**
+ * Smart HTTP method detection using multiple strategies
+ */
+  private static inferHttpMethod(
+    functionName: string,
+    comments: string[],
+    routerRoutes?: Array<{ method: string, path: string, functionName: string }>
+  ): string {
+    // Priority 1: Use router.js information (most reliable)
+    if (routerRoutes) {
+      const routeInfo = routerRoutes.find(r => r.functionName === functionName);
+      if (routeInfo) {
+        console.log(`   🎯 HTTP method from router: ${routeInfo.method}`);
+        return routeInfo.method;
+      }
+    }
+
+    // Priority 2: Check for explicit @method JSDoc comments
+    const commentText = comments.join(' ').toLowerCase();
+    if (commentText.includes('@method')) {
+      const methodMatch = commentText.match(/@method\s+(get|post|put|delete|patch)/i);
+      if (methodMatch) {
+        const method = methodMatch[1].toUpperCase();
+        console.log(`   📝 HTTP method from @method comment: ${method}`);
+        return method;
+      }
+    }
+
+    // Priority 3: Enhanced function name pattern matching
+    const method = this.inferMethodFromFunctionName(functionName);
+    console.log(`   🔤 HTTP method inferred from name "${functionName}": ${method}`);
+    return method;
+  }
+
+  /**
+   * Enhanced function name pattern matching for HTTP methods
+   */
+  private static inferMethodFromFunctionName(functionName: string): string {
+    const name = functionName.toLowerCase();
+
+    // GET patterns (retrieve data)
+    if (name.match(/^(get|fetch|find|search|list|show|display|retrieve|read)/)) return 'GET';
+    if (name.includes('status') || name.includes('info') || name.includes('details')) return 'GET';
+
+    // POST patterns (create new resources)
+    if (name.match(/^(post|create|add|insert|register|submit|send)/)) return 'POST';
+    if (name.includes('signup') || name.includes('login') || name.includes('auth')) return 'POST';
+
+    // PUT patterns (update/replace entire resource)
+    if (name.match(/^(put|update|replace|modify|edit|change)/)) return 'PUT';
+
+    // PATCH patterns (partial updates)
+    if (name.match(/^(patch)/)) return 'PATCH';
+
+    // DELETE patterns (remove resources)
+    if (name.match(/^(delete|remove|destroy|cancel|revoke)/)) return 'DELETE';
+
+    // Webhook and notification patterns
+    if (name.includes('notify') || name.includes('webhook') || name.includes('callback')) return 'POST';
+
+    // Default fallback
+    return 'GET';
+  }
 }
