@@ -201,6 +201,9 @@ export class ControllerParser {
     const parameters: any[] = [];
     if (!func.body) return parameters;
 
+    // ADD THIS DEBUG LINE:
+    console.log(`🔧 extractRealParameters called for: ${func.name}, body contains req.body: ${func.body.includes('req.body')}`);
+
     // 1. Direct access patterns: req.params.id, req.query.page
     const pathParamMatches = func.body.match(/req\.params\.(\w+)/g) || [];
     pathParamMatches.forEach(match => {
