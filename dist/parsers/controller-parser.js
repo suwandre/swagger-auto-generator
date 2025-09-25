@@ -272,12 +272,20 @@ class ControllerParser {
         return parameters;
     }
     static extractBodyFields(functionBody) {
+        console.log('🔍 extractBodyFields called with function body length:', functionBody.length);
+        console.log('🔍 Function body preview:', functionBody.substring(0, 200) + '...');
         const fields = [];
         // Extract from destructuring: const { name, email, role = 'user' } = req.body
         const destructuringMatches = functionBody.match(/const\s*{\s*([^}]+)\s*}\s*=\s*req\.body/g) || [];
-        destructuringMatches.forEach(match => {
+        console.log('🔍 Destructuring matches found:', destructuringMatches.length);
+        if (destructuringMatches.length > 0) {
+            console.log('🔍 Matches:', destructuringMatches);
+        }
+        destructuringMatches.forEach((match, index) => {
+            console.log(`🔍 Processing match ${index + 1}:`, match);
             const variablesMatch = match.match(/{\s*([^}]+)\s*}/);
             if (variablesMatch) {
+                console.log('🔍 Variables found:', variablesMatch[1]);
                 const variables = variablesMatch[1].split(',').map(v => v.trim());
                 variables.forEach(variable => {
                     let fieldName = variable;
@@ -288,6 +296,7 @@ class ControllerParser {
                         hasDefault = true;
                     }
                     if (fieldName && !fieldName.includes('...')) {
+                        console.log('✅ Adding body parameter:', fieldName);
                         fields.push({
                             name: fieldName,
                             type: 'string',
@@ -298,6 +307,8 @@ class ControllerParser {
                 });
             }
         });
+        console.log('📊 Total body parameters extracted:', fields.length);
+        console.log('📊 Fields:', fields);
         return fields;
     }
     static generateResponses() {
