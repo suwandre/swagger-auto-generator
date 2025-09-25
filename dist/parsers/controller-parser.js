@@ -1,10 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ControllerParser = void 0;
 const ast_utils_1 = require("../utils/ast-utils");
 const file_utils_1 = require("../utils/file-utils");
+const path_1 = __importDefault(require("path"));
 class ControllerParser {
-    static async parseControllers(filePaths) {
+    static async parseControllers(filePaths, routerRoutes = []) {
         const endpoints = [];
         console.log(`🔍 Parsing ${filePaths.length} controller files...`);
         for (const filePath of filePaths) {
@@ -22,8 +26,16 @@ class ControllerParser {
                         console.warn(`⚠️  Skipping invalid function in ${filePath}`);
                         continue;
                     }
+                    // Enhancement 2: Skip middleware functions
+                    if (this.isMiddlewareFunction(func, filePath)) {
+                        console.log(`   🔒 Skipping middleware function: ${func.name}`);
+                        continue;
+                    }
                     console.log(`   Processing function: ${func.name}`);
-                    const endpoint = this.convertToSwaggerEndpoint(func, filePath);
+                    // Find corresponding route info from router
+                    const routeInfo = routerRoutes.find(r => r.functionName === func.name);
+                    // Enhancement 3: Pass routerRoutes for smart method detection
+                    const endpoint = this.convertToSwaggerEndpoint(func, filePath, routeInfo, routerRoutes);
                     if (endpoint) {
                         endpoints.push(endpoint);
                         console.log(`   ✅ Added endpoint: ${endpoint.method} ${endpoint.path}`);
@@ -37,17 +49,27 @@ class ControllerParser {
         console.log(`📊 Total endpoints generated: ${endpoints.length}`);
         return endpoints;
     }
-    static convertToSwaggerEndpoint(func, filePath) {
+    static convertToSwaggerEndpoint(func, filePath, routeInfo, routerRoutes) {
         // Skip private functions (starting with _)
         if (func.name.startsWith('_')) {
             console.log(`   Skipping private function: ${func.name}`);
             return null;
         }
         console.log(`   Generating endpoint for: ${func.name}`);
-        const basePath = this.extractBasePathFromFile(filePath);
-        console.log(`   Base path: "${basePath}"`);
-        let route = func.route || this.generateRouteFromFunction(func.name, basePath);
-        console.log(`   Generated route: "${route}"`);
+        // Use router info if available, otherwise generate
+        let route;
+        let method;
+        if (routeInfo) {
+            route = routeInfo.path;
+            method = routeInfo.method;
+            console.log(`   📍 Using router info: ${method} ${route}`);
+        }
+        else {
+            const basePath = this.extractBasePathFromFile(filePath);
+            route = func.route || this.generateRouteFromFunction(func.name, basePath);
+            method = this.inferHttpMethod(func.name, func.comments, routerRoutes);
+            console.log(`   🔧 Generated: ${method} ${route}`);
+        }
         // Safety check for undefined routes
         if (!route || typeof route !== 'string') {
             console.warn(`   ⚠️  Invalid route for function ${func.name}. Using fallback.`);
@@ -57,10 +79,10 @@ class ControllerParser {
         if (!route.startsWith('/')) {
             route = '/' + route;
         }
-        console.log(`   Final route: "${route}"`);
+        console.log(`   ✅ Final endpoint: ${method} ${route}`);
         return {
             path: route,
-            method: func.httpMethod || 'GET',
+            method: method,
             summary: this.generateSummary(func),
             parameters: this.extractRealParameters(func),
             responses: this.generateResponses(),
@@ -303,6 +325,97 @@ class ControllerParser {
             return parentDir ? parentDir.toLowerCase() : 'api';
         }
         return fileName.replace(/\.?controller\.js$|\.js$/, '').toLowerCase();
+    }
+    /**
+     * Detect if a function is middleware (should not be treated as API endpoint)
+     */
+    static isMiddlewareFunction(func, filePath) {
+        const fileName = path_1.default.basename(filePath);
+        // Skip known middleware files
+        if (fileName === 'authenticator.js' || fileName === 'validator.js') {
+            return true;
+        }
+        // Skip by function name patterns
+        const middlewarePatterns = [
+            /^validate/i, // validateRequest, validateBody, etc.
+            /^check/i, // checkPermissions, checkAuth, etc.
+            /^verify/i, // verifyToken, verifyClient, etc.
+            /^auth/i, // authenticate, authorize, etc.
+            /middleware$/i // anyFunctionMiddleware
+        ];
+        if (middlewarePatterns.some(pattern => pattern.test(func.name))) {
+            console.log(`   🔒 Detected middleware by name pattern: ${func.name}`);
+            return true;
+        }
+        // Check function signature - middleware typically has (req, res, next)
+        if (func.parameters && func.parameters.length === 3) {
+            const paramNames = func.parameters.map(p => p.name.toLowerCase());
+            if (paramNames.includes('req') && paramNames.includes('res') && paramNames.includes('next')) {
+                // Additional check: if it calls next() it's definitely middleware
+                if (func.body && func.body.includes('next()')) {
+                    console.log(`   🔒 Detected middleware by signature and next() call: ${func.name}`);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**
+   * Smart HTTP method detection using multiple strategies
+   */
+    static inferHttpMethod(functionName, comments, routerRoutes) {
+        // Priority 1: Use router.js information (most reliable)
+        if (routerRoutes) {
+            const routeInfo = routerRoutes.find(r => r.functionName === functionName);
+            if (routeInfo) {
+                console.log(`   🎯 HTTP method from router: ${routeInfo.method}`);
+                return routeInfo.method;
+            }
+        }
+        // Priority 2: Check for explicit @method JSDoc comments
+        const commentText = comments.join(' ').toLowerCase();
+        if (commentText.includes('@method')) {
+            const methodMatch = commentText.match(/@method\s+(get|post|put|delete|patch)/i);
+            if (methodMatch) {
+                const method = methodMatch[1].toUpperCase();
+                console.log(`   📝 HTTP method from @method comment: ${method}`);
+                return method;
+            }
+        }
+        // Priority 3: Enhanced function name pattern matching
+        const method = this.inferMethodFromFunctionName(functionName);
+        console.log(`   🔤 HTTP method inferred from name "${functionName}": ${method}`);
+        return method;
+    }
+    /**
+   * Enhanced function name pattern matching for HTTP methods
+   */
+    static inferMethodFromFunctionName(functionName) {
+        const name = functionName.toLowerCase();
+        // GET patterns (retrieve data)
+        if (name.match(/^(get|fetch|find|search|list|show|display|retrieve|read)/))
+            return 'GET';
+        if (name.includes('status') || name.includes('info') || name.includes('details'))
+            return 'GET';
+        // POST patterns (create new resources)
+        if (name.match(/^(post|create|add|insert|register|submit|send)/))
+            return 'POST';
+        if (name.includes('signup') || name.includes('login') || name.includes('auth'))
+            return 'POST';
+        // PUT patterns (update/replace entire resource)
+        if (name.match(/^(put|update|replace|modify|edit|change)/))
+            return 'PUT';
+        // PATCH patterns (partial updates)
+        if (name.match(/^(patch)/))
+            return 'PATCH';
+        // DELETE patterns (remove resources)
+        if (name.match(/^(delete|remove|destroy|cancel|revoke)/))
+            return 'DELETE';
+        // Webhook and notification patterns
+        if (name.includes('notify') || name.includes('webhook') || name.includes('callback'))
+            return 'POST';
+        // Default fallback
+        return 'GET';
     }
 }
 exports.ControllerParser = ControllerParser;

@@ -99,6 +99,35 @@ class FileUtils {
         });
         return allFiles;
     }
+    /**
+    * Parse router.js file to extract route definitions
+    * Matches patterns like: router.post("/create-invoice", ..., controller.createInvoice)
+    */
+    static parseRouterFile(filePath) {
+        try {
+            const content = this.readFileContent(filePath);
+            const routes = [];
+            // Regex to match router method calls with controller functions
+            const routePattern = /router\.(get|post|put|delete|patch)\(\s*["']([^"']+)["'][^)]*controller\.(\w+)/g;
+            let match;
+            while ((match = routePattern.exec(content)) !== null) {
+                routes.push({
+                    method: match[1].toUpperCase(),
+                    path: match[2],
+                    functionName: match[3]
+                });
+            }
+            console.log(`📍 Found ${routes.length} routes in router file:`);
+            routes.forEach(route => {
+                console.log(`   ${route.method} ${route.path} → ${route.functionName}`);
+            });
+            return routes;
+        }
+        catch (error) {
+            console.warn(`⚠️  Could not parse router file: ${error.message}`);
+            return [];
+        }
+    }
     static categorizeFile(pattern) {
         if (pattern.includes('controller'))
             return 'controllers';

@@ -111,6 +111,7 @@ export class ControllerParser {
     };
   }
 
+
   private static extractBasePathFromFile(filePath: string): string {
     if (!filePath || typeof filePath !== 'string') {
       console.warn('Invalid filePath provided to extractBasePathFromFile');
@@ -465,8 +466,8 @@ export class ControllerParser {
   }
 
   /**
-   * Enhanced function name pattern matching for HTTP methods
-   */
+ * Enhanced function name pattern matching for HTTP methods
+ */
   private static inferMethodFromFunctionName(functionName: string): string {
     const name = functionName.toLowerCase();
 
