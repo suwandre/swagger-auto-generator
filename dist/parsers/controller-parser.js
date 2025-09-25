@@ -56,6 +56,7 @@ class ControllerParser {
             return null;
         }
         console.log(`   Generating endpoint for: ${func.name}`);
+        this.debugFunctionParsing(func.name, func);
         // Use router info if available, otherwise generate
         let route;
         let method;
@@ -270,6 +271,16 @@ class ControllerParser {
             }
         }
         return parameters;
+    }
+    static debugFunctionParsing(functionName, parsedFunction) {
+        console.log(`🔍 DEBUG: Processing function ${functionName}`);
+        console.log(`🔍 DEBUG: Function type: ${parsedFunction.type || 'undefined'}`);
+        console.log(`🔍 DEBUG: Has body: ${!!parsedFunction.body}`);
+        console.log(`🔍 DEBUG: Body type: ${parsedFunction.body ? (typeof parsedFunction.body) : 'undefined'}`);
+        console.log(`🔍 DEBUG: Body length: ${parsedFunction.body ? parsedFunction.body.length : 'no body'}`);
+        if (parsedFunction.body && typeof parsedFunction.body === 'string') {
+            console.log(`🔍 DEBUG: Body preview: ${parsedFunction.body.substring(0, 100)}...`);
+        }
     }
     static extractBodyFields(functionBody) {
         console.log('🔍 extractBodyFields called with function body length:', functionBody.length);
