@@ -284,7 +284,6 @@ export class ControllerParser {
     const httpMethod = func.httpMethod?.toLowerCase();
     if (httpMethod === 'post' || httpMethod === 'put' || httpMethod === 'patch') {
       const bodyFields = this.extractBodyFields(func.body);
-
       if (bodyFields.length > 0) {
         const properties: any = {};
         const required: string[] = [];
@@ -328,16 +327,16 @@ export class ControllerParser {
   }
 
   private static debugFunctionParsing(functionName: string, parsedFunction: any): void {
-  console.log(`🔍 DEBUG: Processing function ${functionName}`);
-  console.log(`🔍 DEBUG: Function type: ${parsedFunction.type || 'undefined'}`);
-  console.log(`🔍 DEBUG: Has body: ${!!parsedFunction.body}`);
-  console.log(`🔍 DEBUG: Body type: ${parsedFunction.body ? (typeof parsedFunction.body) : 'undefined'}`);
-  console.log(`🔍 DEBUG: Body length: ${parsedFunction.body ? parsedFunction.body.length : 'no body'}`);
-  
-  if (parsedFunction.body && typeof parsedFunction.body === 'string') {
-    console.log(`🔍 DEBUG: Body preview: ${parsedFunction.body.substring(0, 100)}...`);
+    console.log(`🔍 DEBUG: Processing function ${functionName}`);
+    console.log(`🔍 DEBUG: Function type: ${parsedFunction.type || 'undefined'}`);
+    console.log(`🔍 DEBUG: Has body: ${!!parsedFunction.body}`);
+    console.log(`🔍 DEBUG: Body type: ${parsedFunction.body ? (typeof parsedFunction.body) : 'undefined'}`);
+    console.log(`🔍 DEBUG: Body length: ${parsedFunction.body ? parsedFunction.body.length : 'no body'}`);
+
+    if (parsedFunction.body && typeof parsedFunction.body === 'string') {
+      console.log(`🔍 DEBUG: Body preview: ${parsedFunction.body.substring(0, 100)}...`);
+    }
   }
-}
 
   private static extractBodyFields(functionBody: string): any[] {
     console.log('🔍 extractBodyFields called with function body length:', functionBody.length);
