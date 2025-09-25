@@ -71,6 +71,31 @@ class SwaggerGenerator {
         console.log(`✅ Generated documentation for ${endpoints.length} endpoints!`);
     }
     buildSwaggerSpec(endpoints) {
+        // Parse baseUrl into host and basePath
+        let host = 'localhost:3000';
+        let basePath = '/';
+        let schemes = ['http'];
+        if (this.config.apiInfo.baseUrl) {
+            const baseUrl = this.config.apiInfo.baseUrl;
+            // Remove protocol if present
+            let cleanUrl = baseUrl;
+            if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
+                schemes = baseUrl.startsWith('https://') ? ['https', 'http'] : ['http', 'https'];
+                cleanUrl = baseUrl.replace(/^https?:\/\//, '');
+            }
+            else {
+                schemes = ['https', 'http']; // Default for production
+            }
+            // Split domain and path
+            const parts = cleanUrl.split('/');
+            host = parts[0]; // Domain only
+            if (parts.length > 1) {
+                basePath = '/' + parts.slice(1).join('/'); // Path only
+            }
+            console.log(`🔧 Parsed baseUrl "${baseUrl}" into:`);
+            console.log(`   Host: ${host}`);
+            console.log(`   BasePath: ${basePath}`);
+        }
         const spec = {
             swagger: '2.0',
             info: {
@@ -78,15 +103,15 @@ class SwaggerGenerator {
                 version: this.config.apiInfo.version,
                 description: this.config.apiInfo.description || 'Auto-generated API documentation'
             },
-            host: this.config.apiInfo.baseUrl || 'localhost:3000',
-            basePath: '/',
-            schemes: ['http', 'https'],
+            host: host, // Fixed: Now only domain
+            basePath: basePath, // Fixed: Now only path
+            schemes: schemes, // Dynamic based on protocol
             consumes: ['application/json'],
             produces: ['application/json'],
             paths: {},
             definitions: {}
         };
-        // Group endpoints by path and method
+        // Group endpoints by path and method (unchanged)
         const pathsMap = {};
         endpoints.forEach(endpoint => {
             if (!pathsMap[endpoint.path]) {
