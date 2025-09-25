@@ -1,6 +1,6 @@
 {
   "name": "@suwandre/auto-swagger-generator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Automated swagger documentation generator for STOKR microservices",
   "main": "dist/index.js",
   "bin": {
