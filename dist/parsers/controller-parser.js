@@ -233,9 +233,8 @@ class ControllerParser {
                 });
             }
         });
-        // 4. Body parameters (for POST/PUT endpoints)
-        const httpMethod = func.httpMethod?.toLowerCase();
-        if (httpMethod === 'post' || httpMethod === 'put' || httpMethod === 'patch') {
+        // 4. Body parameters
+        if (func.body.includes('req.body')) {
             const bodyFields = this.extractBodyFields(func.body);
             if (bodyFields.length > 0) {
                 const properties = {};
@@ -261,8 +260,8 @@ class ControllerParser {
                     description: 'Request body'
                 });
             }
-            // Also check for direct req.body usage
-            if (func.body.includes('req.body') && bodyFields.length === 0) {
+            else {
+                // Fallback for direct req.body usage without destructuring
                 parameters.push({
                     name: 'body',
                     in: 'body',
